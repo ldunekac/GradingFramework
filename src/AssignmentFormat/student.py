@@ -57,8 +57,11 @@ class Student:
         zipFiles = [f for f in self.dataFiles if re.match(zipRegex, f)]
         self.dataFiles = [f for f in self.dataFiles if f not in zipFiles] # remvoe zip files from list
         if(len(zipFiles) == 1):
-            with zipfile.ZipFile(zipFiles[0]) as zf:
-                zf.extractall(self.studentAssignmentDir)
+            try:
+                with zipfile.ZipFile(zipFiles[0]) as zf:
+                    zf.extractall(self.studentAssignmentDir)
+            except:
+                print(self.studentID + " does not have a dot a real zip file")
         elif len(zipFiles) > 1: # multiple zip files each one needs its own directory
             print("MULTIPLE ZIP FILES OCCURED, IMPLEMENT TO CONTINUE")
 
@@ -95,17 +98,20 @@ class Student:
             late penility and total fields are.
         """
         gradeRubric = ""
+
+        penility = self.calculateLatePenility()
         with open(self.infoFile) as f:
             gradeRubric = f.readline().split("Name: ")[1]
         with open(config.RUBRIC_PATH) as f:
             gradeRubric += f.read()
 
         gradeRubric += "\n"*2 + "="*20 + "\n"
-        gradeRubric += "[{0}/0] Late\n".format(self.calculateLatePenility())
+        gradeRubric += "[{0}/0] Late\n".format(penility)
         gradeRubric += "="*20 + "\n"
         gradeRubric += "Total: \n"
         gradeRubric += "-"*5 + " Comments " + "-"*5 + "\n"
-        print(gradeRubric)
+        if penility < 0:
+            gradeRubric += "{0}: Late".format(str(penility))
 
         with open(os.path.join(self.studentDir, "grade.txt"), "w") as r:
             r.write(gradeRubric)
@@ -115,7 +121,7 @@ class Student:
             late submissions.
         """
         if config.ATTEMPT_TYPE == config.GRADE_ATTEMPT_BEFORE_SUBMISSON:
-            if self.timeStamp <= config.DUE_DATE:
+            if time.strptime(self.timeStamp, config.DATE_FORMAT) <= time.strptime(config.DUE_DATE, config.DATE_FORMAT):
                 return 0
             else:
                 return -1000
